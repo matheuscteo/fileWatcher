@@ -1,7 +1,10 @@
 import os
 import hashlib
 import logging
+<<<<<<< HEAD
 import asyncio
+=======
+>>>>>>> 0a0a7ba446ff064dcf1d889e022b915c703ba8d3
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileSystemEvent
 from typing import Callable, Dict
@@ -10,7 +13,11 @@ class FileWatcher(FileSystemEventHandler):
   """
   Watches an specific file
   """
+<<<<<<< HEAD
   def __init__(self, file_path: str, on_file_change: Callable, loop: asyncio.AbstractEventLoop):
+=======
+  def __init__(self, file_path: str, on_file_change: Callable):
+>>>>>>> 0a0a7ba446ff064dcf1d889e022b915c703ba8d3
     """Initialize the watcher
 
     Args:
@@ -22,7 +29,10 @@ class FileWatcher(FileSystemEventHandler):
     self.on_file_change = on_file_change
     self.last_modified = os.path.getmtime(file_path)
     self.checksum = self.calculate_checksum()
+<<<<<<< HEAD
     self.loop = loop
+=======
+>>>>>>> 0a0a7ba446ff064dcf1d889e022b915c703ba8d3
 
   def calculate_checksum(self):
     with open(self.file_path, 'r') as file:
@@ -43,7 +53,11 @@ class FileWatcher(FileSystemEventHandler):
       if current_checksum != self.checksum:
         self.checksum = current_checksum
         self.last_modified = os.path.getmtime(self.file_path)
+<<<<<<< HEAD
         self.loop.create_task(self.on_file_change(self.file_path, self.last_modified, self.checksum))
+=======
+        self.on_file_change(self.file_path, self.last_modified, self.checksum)
+>>>>>>> 0a0a7ba446ff064dcf1d889e022b915c703ba8d3
 
 class FileWatcherManager:
   def __init__(self) -> None:
@@ -56,6 +70,7 @@ class FileWatcherManager:
       }
     }
     """
+<<<<<<< HEAD
     self.watchers: Dict[str, Observer] ={}
     self.loop = asyncio.get_event_loop()
 
@@ -70,23 +85,55 @@ class FileWatcherManager:
       self.watchers[file_path] = {}
 
     file_watcher = FileWatcher(file_path=file_path, on_file_change=on_change, loop=self.loop)
+=======
+    self.watchers: Dict[str, Dict[str, Observer]] ={}
+
+  def start_watcher(self, proposal: str, file_type: str, file_path: str, on_change: Callable):
+    """Starts watcher for a given file and proposal
+
+    Args:
+        proposal (str): Proposal number from request
+        file_type (str): e.g. log or context
+        file_path (str): File path
+        on_change (Callable): Callback for changes
+    """
+    if proposal not in self.watchers:
+      self.watchers[proposal] = {}
+
+    if file_type in self.watchers[proposal]:
+      print("Watcher exits")
+      return
+
+    file_watcher = FileWatcher(file_path=file_path, on_file_change=on_change)
+>>>>>>> 0a0a7ba446ff064dcf1d889e022b915c703ba8d3
 
     print("Watcher added to the list")
 
     observer = Observer()
     observer.schedule(file_watcher, os.path.dirname(file_path), recursive=False)
+<<<<<<< HEAD
     self.watchers[file_path] = observer
     self.watchers[file_path].start()
 
     print(self.watchers)
 
   def stop_watcher(self, file_path: str):
+=======
+    self.watchers[proposal][file_type] = observer
+    self.watchers[proposal][file_type].start()
+
+    print(self.watchers)
+
+
+  def stop_watcher(self, proposal: str, file_type: str):
+>>>>>>> 0a0a7ba446ff064dcf1d889e022b915c703ba8d3
     """Stops watching a file type for a given proposal
 
     Args:
         proposal (str): Proposal number
         file_type (str): e.g. log or context
     """
+<<<<<<< HEAD
     if  file_path not in self.watchers:
         print("pp isnt being watched")
         return
@@ -104,3 +151,26 @@ class FileWatcherManager:
         return False
 
     return self.watchers[file_path].is_alive()
+=======
+    if proposal not in self.watchers:
+        print("pp isnt being watched")
+        return
+
+    if file_type in self.watchers[proposal]:
+        self.watchers[proposal][file_type].stop()
+        del self.watchers[proposal][file_type]
+
+
+  def watcher_status(self, proposal: str, file_type: str):
+    """Shows the watcher status. False = off, True = on
+    """
+    if proposal not in self.watchers:
+        print("pp isnt being watched")
+        return False
+
+    if file_type not in self.watchers[proposal]:
+        return False
+
+    return self.watchers[proposal][file_type].is_alive()
+
+>>>>>>> 0a0a7ba446ff064dcf1d889e022b915c703ba8d3
