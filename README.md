@@ -1,52 +1,69 @@
-## API file handler for DAMNIT
+# The **FileWatcher** System for DAMNIT!
 
-The purpose of the file handler in the MVP context is:
+### Overview
 
- - Get file content and metadata
- - Watch the file for changes
- - Notify the user when changes are applied (e.g. via an external editor)
+DAMNIT will have to watch files for the context editor feature (read-only MVP) and perhaps in the future to update the log info. I'm using **checksums**  to monitor file changes efficiently. Plus, it's designed for **web pooling** now. Still it can be plugged into something else like **webhooks** later. I tried to make it as agnostic as I could. 
 
-Thinking about this, I recalled an old use-case that requires the same functionality: the log file output. Hence, why not work in a watching engine that's modular and less context-file specific? There's no extra effort on that.
+### The  **FileWatcherManager** 
 
-So I considered making a "FileWatcher" engine for our server. The structure looks like this:
+The **FileWatcherManager** is where all the action happens. It keeps track of which files are being watched and manages both the **Observer** and **FileWatcher** instances:
 
-We have a `FileWatcher` class that receives a file path and a callback. The callback will be triggered when the file has changed it's content. The callback, being arbitrary, can contain for instance a websocket broadcast capability for context files or a error checker for log watching and so on...
- 
-A FileWatcherManager class, supposed to be instantiated in a singleton , will orchestrate the watchers by generating, starting, stopping and accessing the status of watchdog `Observers`. I assumed that the singleton approach would be nice so we can keep track of all files being watched. E.g. we want to sure that there are not more than one observer per file.
+- **Observer**: Listens for file system events
+- **FileWatcher**: Tracks file checksum and data
 
-The Manager scheme will look like this :
+That's the inferface between the API and the file watcher layer. It has quick access to the current checksum for a given file being watched (when we start pooling we should avoid ready the file at every request). We keep the observer to stop the watchdog upon request. I still need to improve the stopping of the observer.
 
-```json
-{ 
-"123": 
-  {
-  "ctx": observer,
-  "log": observer,
-  },
-  
-"456":
-  {
-  "ctx": observer,
-  "log": observer,
-  }
+The manager structure looks like this:
+
+```python
+{"usr/file1.txt": {"observer": ObserverInstance1, "watcher": FileWatcherInstance1},
+ "usr/file2.txt": {"observer": ObserverInstance2,"watcher": FileWatcherInstance2}
+...
 }
 ```
 
-where the context and log files are being watched for proposals `123` and `456`. 
-### Use Case example workflow
 
-**-> The user of proposal 1111 opened the context file editor in the client**
+### Ideas for the Routes
 
-#### Phase 1 - Get content
+How I'm thinking of designing now:
 
--> The client sends a request to fetch the file data via the `/{1111}/{ctx}/current` route
--> The server looks at the proposal "1111" folder for a "context.py", reads it and send it's content/metadata to the client.
--> Client handles first render of the file
-#### Phase 2 - Watching
+1. **Health Check** You know what's for
 
--> The client also sends a signal to start to watch the file via `/{1111}/{ctx}/watcher/start`
--> The server runs a watchdog observer for that file with a callback (that will depend on what type of file is being watched)
--> Callback is triggered when file has changed. For the context file this could be a broadcasting via web-sockets of the changes 
-#### Phase 3 - Killing
+2. **/{proposal}/{file_name}/current**:
+    - **Arguments**: `proposal`, `file_name`.
+    - **Purpose**: Get the current **checksum**, **last modified** time, and the **content** of the file. 
 
--> User closes the proposal -> clients asks server to stop watching
+3. **/{proposal}/{file_name}/watcher/start**:
+    - **Arguments**: `proposal`, `file_name`, and a callback (`on_change`).
+    - **Purpose**: Start watching a file. The callback is called whenever the file changes. You can plug in any logic there. 
+    
+4. **/{proposal}/{file_name}/watcher/stop**:
+    - **Arguments**: `proposal`, `file_name`.
+    - **Purpose**: Stop watching the file when you’re done. E.g. moved to another proposal
+    
+5. **/{proposal}/{file_name}/watcher/status**:
+    - **Arguments**: `proposal`, `file_name`.
+    - **Purpose**: Check if the watcher is running or not. Helpful to know if your file is being monitored.
+    
+6. **/has_changed/{proposal}/{file_name}/{checksum}**:
+    - **Arguments**: `proposal`, `file_name`, `checksum`.
+    - **Purpose**: Checks an arbitrary checksum with the one of the file being watched. Perhaps we move this to a POST request and the checksum in the body?
+
+---
+
+### How I'm planning to do pooling
+
+
+1. **Client Fetches Current Content**: First, you grab the file’s content and **checksum**. Hold on to that checksum
+    
+2. **Start Watching the File**: Then, you start the **file watcher**. The system will now monitor the file for changes.
+    
+3. **Start Pooling**: The client repeatedly asks "Has this file changed?" by checking the checksum with the `has_changed` route. The system only replies **True** if something has really changed, which saves you from constant file reads. 
+    
+4. **Update the Interface**: Once the file changes, the client can get the updated content and refresh the UI.
+    
+5. **Stop Pooling and Watcher**: Once the update is done, you stop the pooling (and optionally, the watcher)
+    
+
+---
+
