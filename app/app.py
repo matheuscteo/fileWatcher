@@ -5,6 +5,7 @@ from app.endpoints import router
 
 app = FastAPI()
 
+# May delete
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
