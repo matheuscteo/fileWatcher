@@ -2,6 +2,9 @@
 
 ### Overview
 
+![image](https://github.com/user-attachments/assets/29eefe8d-35d1-462b-ba5e-4b3a25d3b97c)
+
+
 DAMNIT will have to watch files for the context editor feature (read-only MVP) and perhaps in the future to update the log info. I'm using **checksums**  to monitor file changes efficiently. Plus, it's designed for **web pooling** now. Still it can be plugged into something else like **webhooks** later. I tried to make it as agnostic as I could. 
 
 ### The  **FileWatcherManager** 
@@ -66,7 +69,5 @@ How I'm thinking of designing now:
     
 
 ---
-
-![image](https://github.com/user-attachments/assets/29eefe8d-35d1-462b-ba5e-4b3a25d3b97c)
 
 
