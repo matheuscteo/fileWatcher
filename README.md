@@ -67,3 +67,6 @@ How I'm thinking of designing now:
 
 ---
 
+![image](https://github.com/user-attachments/assets/29eefe8d-35d1-462b-ba5e-4b3a25d3b97c)
+
+
