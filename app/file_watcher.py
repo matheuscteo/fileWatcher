@@ -49,7 +49,6 @@ class FileWatcher(FileSystemEventHandler):
         """
 
         if event.src_path == str(self.file_path):
-            logger.info(f"Watched file modified")
             current_checksum = await self.calculate_checksum()
 
             if current_checksum != self.checksum:
@@ -78,22 +77,30 @@ class FileWatcherManager:
         """
         self.watchers: Dict[str, Dict[str,int | Observer | FileWatcher | float | list]] = {}
         self.loop = asyncio.get_event_loop()
+        self.timeout=10
+        self.loop.create_task(self.cleanup_inactive_watchers())
 
-    async def start_watcher(self, file_path: str, client_ip: str, on_change: Optional[Callable] = None):
-        """Starts watcher for a given file and proposal
+    async def register_client(self, file_path: str, client_ip: str, on_change: Optional[Callable] = None):
+        """Starts watcher for a given file and proposal if watcher doesn't
+        exist. If it does, adds the client to the client list.
+        Every time this function is called, last_activity is updated
 
         Args:
             file_path (str): File path
+            client_ip (str): Client IP 
             on_change (Callable): Callback for changes
         """
         if file_path not in self.watchers:
             self.watchers[file_path] = {}
-        else:
+        elif client_ip not in self.watchers[file_path]["clients"]:
             self.watchers[file_path]["count"] += 1
             self.watchers[file_path]["last_activity"] = time.time()
-            self.watchers[file_path]["clients"].add(client_ip)
+            self.watchers[file_path]["clients"].append(client_ip)
             logger.info(f"Client added to an watched file path: {file_path}")
-            logger.info(f"{self.watchers}")
+            return
+        else:
+            logger.info(f"Client {client_ip} already watching file path: {file_path}")
+            self.watchers[file_path]["last_activity"] = time.time()
             return
         
         file_watcher = FileWatcher(
@@ -112,8 +119,20 @@ class FileWatcherManager:
         self.watchers[file_path]["count"] = 1 
         self.watchers[file_path]["clients"]= [client_ip]
         self.watchers[file_path]["observer"].start()
+        self.watchers[file_path]["last_activity"] = time.time()
         
-        logger.info(self.watchers)
+        logger.info(f"Watcher's list updated: {self.watchers}")
+        
+    async def cleanup_inactive_watchers(self):
+        """Periodically checks for inactive watchers and stops them."""
+        logger.info("Started clean up checks for FileWatcherManager")
+        while True:
+            await asyncio.sleep(10)
+            current_time = time.time()
+            for file_path in list(self.watchers.keys()):
+                if (current_time - self.watchers[file_path]["last_activity"]) > self.timeout:
+                    self.stop_watcher(file_path) 
+                    logger.info(f"Stopped watcher for {file_path} due to inactivity.")
 
     def stop_watcher(self, file_path: str):
         """Stops watching a file type for a given path
@@ -142,11 +161,12 @@ class FileWatcherManager:
           file_path (str): file path
           checksum: checksum for comparison 
         """
-        if file_path not in self.watchers:
-            logger.info("File isn't being watched, starting watcher.")
-            await self.start_watcher(file_path, client_ip)
+        await self.register_client(file_path, client_ip)
+        
         if self.watchers[file_path]['watcher'].checksum is None:
             logger.warning("Checksum can not be found")
             return None
+        
+        logger.info(self.watchers[file_path]['watcher'].checksum != checksum)
 
         return self.watchers[file_path]['watcher'].checksum != checksum

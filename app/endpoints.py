@@ -24,49 +24,20 @@ async def health_check():
     return JSONResponse(content={"response": "OK"})
 
 
-@router.get("/{proposal}/{file_name}/current")
-async def get_file(proposal: str):
+@router.get("/file_current")
+async def get_file(proposal: str,
+                   file_name: str):
     data = await fetch_file_data(file_path, with_content=True)
     return JSONResponse(data)
 
 
-@router.post("/{proposal}/{file_name}/watcher/start")
-async def start_watcher(proposal: str,
-                        file_name: str,
-                        manager: FileWatcherManager = Depends(get_watcher_manager)):
-
-    async def on_change(a, b, c):
-        """Anything else we need can go here"""
-        print("triggered", a, b, c)
-
-    await watcher_manager.start_watcher(
-        file_path=file_path,
-        on_change=on_change
-    )
-
-    return JSONResponse(content={"message": "Watcher started",
-                                 "file_path": file_path})
-
-
-@router.post("/{proposal}/{file_name}/watcher/stop")
-async def stop_watcher(proposal: str,
-                        file_name: str,
-                        manager: FileWatcherManager = Depends(get_watcher_manager)):
-
-    watcher_manager.stop_watcher(file_path=file_path)
-
-    return JSONResponse(content={"message": "Watcher stopped",
-                                 "file_path": file_path})
-
-
-@router.get("/{proposal}/{file_name}/watcher/status")
+@router.get("/watcher_status")
 async def start_watcher(proposal: str,
                         file_name: str,
                         manager: FileWatcherManager = Depends(get_watcher_manager)):
 
     status = watcher_manager.watcher_status(file_path)
-    return JSONResponse(content={"status": status,
-                                 "file_path": file_path})
+    return JSONResponse(content={"status": status})
 
 
 @router.get("/has_new_checksum")
@@ -77,7 +48,6 @@ async def has_new_checksum(proposal: str,
                         watcher_manager: FileWatcherManager = Depends(get_watcher_manager),
                         ):
     
-    print(file_name,proposal,checksum)
     client_ip = request.client.host
     has_new_checksum = await watcher_manager.has_new_checksum(file_path, checksum, client_ip)
     return JSONResponse(content={"has_changed": has_new_checksum,
