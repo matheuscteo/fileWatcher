@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileSystemEvent
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 from app.utils import fetch_file_data
 
@@ -19,7 +19,7 @@ class FileWatcher(FileSystemEventHandler):
     Watches an specific file
     """
 
-    def __init__(self, file_path: str, on_file_change: Callable, loop: asyncio.AbstractEventLoop):
+    def __init__(self, file_path: str, loop: asyncio.AbstractEventLoop, on_file_change: Optional[Callable] = None):
         """Initialize the watcher
 
         Args:
@@ -55,11 +55,11 @@ class FileWatcher(FileSystemEventHandler):
             if current_checksum != self.checksum:
                 self.checksum = current_checksum
                 self.last_modified = os.path.getmtime(self.file_path)
-                await self.on_file_change(self.file_path, self.last_modified, self.checksum)
+                if self.on_file_change is not None:
+                    await self.on_file_change(self.file_path, self.last_modified, self.checksum)
 
     def on_modified(self, event: FileSystemEvent):
         self.loop.create_task(self.on_modified_async(event))
-
 
 class FileWatcherManager:
     def __init__(self) -> None:
@@ -72,13 +72,14 @@ class FileWatcherManager:
             Observer: watcher observer,
             FileWatcher: file watcher instance,
             last_activity: last pulled timestamp,
+            clients: list of clients
           }
         }
         """
-        self.watchers: Dict[str, Dict[str,int | Observer | FileWatcher | float]] = {}
+        self.watchers: Dict[str, Dict[str,int | Observer | FileWatcher | float | list]] = {}
         self.loop = asyncio.get_event_loop()
 
-    async def start_watcher(self, file_path: str, on_change: Callable):
+    async def start_watcher(self, file_path: str, client_ip: str, on_change: Optional[Callable] = None):
         """Starts watcher for a given file and proposal
 
         Args:
@@ -90,6 +91,7 @@ class FileWatcherManager:
         else:
             self.watchers[file_path]["count"] += 1
             self.watchers[file_path]["last_activity"] = time.time()
+            self.watchers[file_path]["clients"].add(client_ip)
             logger.info(f"Client added to an watched file path: {file_path}")
             logger.info(f"{self.watchers}")
             return
@@ -107,8 +109,11 @@ class FileWatcherManager:
     
         self.watchers[file_path]["observer"] = observer
         self.watchers[file_path]["watcher"] = file_watcher
-        self.watchers[file_path]["count"] = 1   
+        self.watchers[file_path]["count"] = 1 
+        self.watchers[file_path]["clients"]= [client_ip]
         self.watchers[file_path]["observer"].start()
+        
+        logger.info(self.watchers)
 
     def stop_watcher(self, file_path: str):
         """Stops watching a file type for a given path
@@ -130,18 +135,18 @@ class FileWatcherManager:
             return False
 
         return self.watchers[file_path]["observer"].is_alive()
-
-    def has_changed(self, file_path: str, checksum: str):
+    
+    async def has_new_checksum(self, file_path: str, checksum: str, client_ip: str):
         """Compares checksum in a file being watched
         Args:
           file_path (str): file path
           checksum: checksum for comparison 
         """
         if file_path not in self.watchers:
-            logging.warning("File isn't being watched, nothing to do.")
-            return None
+            logger.info("File isn't being watched, starting watcher.")
+            await self.start_watcher(file_path, client_ip)
         if self.watchers[file_path]['watcher'].checksum is None:
-            logging.warning("Checksum can not be found")
+            logger.warning("Checksum can not be found")
             return None
 
         return self.watchers[file_path]['watcher'].checksum != checksum

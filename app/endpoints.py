@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, Request
 from fastapi.responses import JSONResponse
 from pathlib import Path
 import json
@@ -69,14 +69,18 @@ async def start_watcher(proposal: str,
                                  "file_path": file_path})
 
 
-@router.get("/has_changed/{proposal}/{file_name}/{checksum}")
-async def start_watcher(proposal: str,
+@router.get("/has_new_checksum")
+async def has_new_checksum(proposal: str,
                         file_name: str,
                         checksum: str,
-                        manager: FileWatcherManager = Depends(get_watcher_manager)):
-
-    has_changed = watcher_manager.has_changed(file_path, checksum)
-    return JSONResponse(content={"has_changed": has_changed,
+                        request: Request,
+                        watcher_manager: FileWatcherManager = Depends(get_watcher_manager),
+                        ):
+    
+    print(file_name,proposal,checksum)
+    client_ip = request.client.host
+    has_new_checksum = await watcher_manager.has_new_checksum(file_path, checksum, client_ip)
+    return JSONResponse(content={"has_changed": has_new_checksum,
                                  "file_path": file_path})
 
 #ws_manager = WebSocketManager()
