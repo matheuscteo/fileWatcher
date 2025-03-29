@@ -129,13 +129,18 @@ class FileWatcherManager:
         while True:
             await asyncio.sleep(10)
             current_time = time.time()
-            for file_path in list(self.watchers.keys()):
-                if (current_time - self.watchers[file_path]["last_activity"]) > self.timeout:
-                    self.stop_watcher(file_path)
-                    del self.watchers[file_path]
-                    logger.info(f"Stopped watcher for {file_path} due to inactivity.")
+            
+            inactive_files = [
+                file_path for file_path, data in self.watchers.items()
+                if (current_time - data["last_activity"]) > self.timeout
+            ]
+            
+            if inactive_files:
+                logger.info(f"Stopping watcher for {inactive_files} due to inactivity.")
+            
+            await asyncio.gather(*(self.stop_watcher(file) for file in inactive_files))
 
-    def stop_watcher(self, file_path: str):
+    async def stop_watcher(self, file_path: str):
         """Stops watching a file type for a given path
         """
         if file_path not in self.watchers:
@@ -151,7 +156,6 @@ class FileWatcherManager:
         """Shows the watcher status. False = off, True = on
         """
         if file_path not in self.watchers:
-            logging.warning("File isn't being watched, nothing to do.")
             return False
 
         return self.watchers[file_path]["observer"].is_alive()

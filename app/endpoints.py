@@ -32,7 +32,7 @@ async def get_file(proposal: str,
 
 
 @router.get("/watcher_status")
-async def start_watcher(proposal: str,
+async def watcher_status(proposal: str,
                         file_name: str,
                         manager: FileWatcherManager = Depends(get_watcher_manager)):
 
