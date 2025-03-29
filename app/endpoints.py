@@ -52,32 +52,3 @@ async def has_new_checksum(proposal: str,
     has_new_checksum = await watcher_manager.has_new_checksum(file_path, checksum, client_ip)
     return JSONResponse(content={"has_changed": has_new_checksum,
                                  "file_path": file_path})
-
-#ws_manager = WebSocketManager()
-
-# @router.websocket("/ws")
-# async def websocket_endpoint(websocket: WebSocket):
-#     """Websocket route for file watching updates
-
-#     Event types:
-#     "ping" -> Heartbeat message - Server responds "pong"
-#     ""
-
-#     Args:
-#         websocket (WebSocket): _description_
-#     """
-#     print('connecting')
-#     await ws_manager.connect(websocket)
-#     handler = WebSocketHandler(websocket, ws_manager, watcher_manager)
-
-#     try:
-#         while True:
-#             data = await websocket.receive_json()
-#             event = data.get("event")
-#             if not event:
-#                 await websocket.send_text("Malformed JSON")
-#             else:
-#                 await handler.handle_event(event, data)
-
-#     except WebSocketDisconnect:
-#         await ws_manager.disconnect(websocket)

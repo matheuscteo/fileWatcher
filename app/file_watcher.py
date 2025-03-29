@@ -131,7 +131,8 @@ class FileWatcherManager:
             current_time = time.time()
             for file_path in list(self.watchers.keys()):
                 if (current_time - self.watchers[file_path]["last_activity"]) > self.timeout:
-                    self.stop_watcher(file_path) 
+                    self.stop_watcher(file_path)
+                    del self.watchers[file_path]
                     logger.info(f"Stopped watcher for {file_path} due to inactivity.")
 
     def stop_watcher(self, file_path: str):
