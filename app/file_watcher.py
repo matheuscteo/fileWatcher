@@ -49,7 +49,7 @@ class FileWatcher(FileSystemEventHandler):
         """
 
         if event.src_path == str(self.file_path):
-            logging.info(f"Watched file modified")
+            logger.info(f"Watched file modified")
             current_checksum = await self.calculate_checksum()
 
             if current_checksum != self.checksum:
@@ -67,12 +67,15 @@ class FileWatcherManager:
         Manages the watchers
         watchers should be a Dict like the following:
         {
-          "proposal#": {
-            "file_type": {"observer": Observer instance}
+          file_path: {
+            count: how many clients are pulling,
+            Observer: watcher observer,
+            FileWatcher: file watcher instance,
+            last_activity: last pulled timestamp,
           }
         }
         """
-        self.watchers: Dict[str, Dict[str, Observer | FileWatcher]] = {}
+        self.watchers: Dict[str, Dict[str,int | Observer | FileWatcher | float]] = {}
         self.loop = asyncio.get_event_loop()
 
     async def start_watcher(self, file_path: str, on_change: Callable):
@@ -84,17 +87,27 @@ class FileWatcherManager:
         """
         if file_path not in self.watchers:
             self.watchers[file_path] = {}
-
+        else:
+            self.watchers[file_path]["count"] += 1
+            self.watchers[file_path]["last_activity"] = time.time()
+            logger.info(f"Client added to an watched file path: {file_path}")
+            logger.info(f"{self.watchers}")
+            return
+        
         file_watcher = FileWatcher(
             file_path=file_path, on_file_change=on_change, loop=self.loop)
 
-        logging.info("Watcher added to the list")
+        logger.info(f"""New watcher added to the list \n
+                     file {file_path} is being watched now""")
+        
         await file_watcher.initialize_checksum()
         observer = Observer()
         observer.schedule(file_watcher, os.path.dirname(
             file_path), recursive=False)
+    
         self.watchers[file_path]["observer"] = observer
         self.watchers[file_path]["watcher"] = file_watcher
+        self.watchers[file_path]["count"] = 1   
         self.watchers[file_path]["observer"].start()
 
     def stop_watcher(self, file_path: str):
