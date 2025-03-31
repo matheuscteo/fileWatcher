@@ -1,6 +1,7 @@
 ## API file handler for DAMNIT
 
-<img width="2116" alt="FileWatcher_DAMNIT" src="https://github.com/user-attachments/assets/e4e3bef2-67a8-4113-a864-d7a69119bdee" />
+![image](https://github.com/user-attachments/assets/5bd455ed-9746-48a5-84e7-314cc98ba51c)
+
 
 The purpose of the file handler
  in the MVP context is:
