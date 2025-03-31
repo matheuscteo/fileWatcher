@@ -1,6 +1,9 @@
 ## API file handler for DAMNIT
 
-The purpose of the file handler in the MVP context is:
+<img width="2116" alt="FileWatcher_DAMNIT" src="https://github.com/user-attachments/assets/e4e3bef2-67a8-4113-a864-d7a69119bdee" />
+
+The purpose of the file handler
+ in the MVP context is:
 
  - Get file content and metadata
  - Watch the file for changes
