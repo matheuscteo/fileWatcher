@@ -1,6 +1,6 @@
 ## API file handler for DAMNIT
 
-![image](https://github.com/user-attachments/assets/5bd455ed-9746-48a5-84e7-314cc98ba51c)
+![image](https://github.com/user-attachments/assets/3f13484e-e799-43c3-972e-267f82b5a3b6)
 
 
 The purpose of the file handler
